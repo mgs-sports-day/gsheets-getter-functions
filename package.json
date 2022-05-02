@@ -1,0 +1,23 @@
+{
+  "name": "gsheets-getter-functions",
+  "version": "1.0.0",
+  "description": "Functions to load data from the MGS Sports Day spreadsheet",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mgs-sports-day/gsheets-getter-functions.git"
+  },
+  "author": "tti0",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mgs-sports-day/gsheets-getter-functions/issues"
+  },
+  "homepage": "https://github.com/mgs-sports-day/gsheets-getter-functions#readme",
+  "dependencies": {
+    "axios": "^0.27.2",
+    "underscore": "^1.13.3"
+  }
+}
