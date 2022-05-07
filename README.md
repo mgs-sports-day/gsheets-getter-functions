@@ -40,10 +40,9 @@ Please do not hesitate to ask if anything needs clarifying.
 
 + getSummaryStandings
 + getEventResults
-+ ~~getEventRecord~~
-+ ~~getFormResults~~
-+ ~~getRecordStatistics~~
-+ ~~getYearGroupRecords~~
++ getYearGroupRecords
++ getRecordsSummaryStats
++ getFormResults
 
 ## Licensing
 
