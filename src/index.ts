@@ -6,24 +6,15 @@
 
 import axios from 'axios';
 import { indexOf, pluck, where } from 'underscore';
-
-export type CellType = string | number
-export type Dimension = 'ROWS' | 'COLUMNS'
-export type YearGroup = 7 | 8 | 9 | 10
-
-export enum SportEvent {
-    LongJump = 'longJump',
-    HighJump = 'highJump',
-    Shot = 'shot',
-    Javelin = 'javelin',
-    Run100 = '100m',
-    Run200 = '200m',
-    Run300 = '300m',
-    Run800 = '800m',
-    Run1500 = '1500m',
-    Run4x100 = '4x100m',
-    Run4x300 = '4x300m'
-}
+import type {
+    BonusPointAllocations,
+    Dimension, EventRecordStanding, EventResults,
+    Form, FormResults,
+    SportEvent,
+    SportEventName, SubeventFormResult,
+    SummaryResults,
+    YearGroup, YearGroupRecordSummary,
+} from './types';
 
 class GSheetsAPI {
     private readonly apiKey: string;
@@ -39,11 +30,11 @@ class GSheetsAPI {
      * @param {Object} response - The array
      * @returns {Object} - The JSON object
      */
-    private static parseResponse(response: CellType[][]) {
+    private static parseResponse<T extends object>(response: any[][]): T[] {
         const headers = response[0];
         const dataset = response.slice(1);
         return dataset.map(a => {
-            const object: Record<CellType, CellType> = {};
+            const object = {} as any;
             headers.forEach((k, i) => {
                 object[k] = a[i];
             });
@@ -99,7 +90,7 @@ class GSheetsAPI {
     async getEventsList() {
         const queryURL = this.buildQuery('event_list!A2:F13', 'ROWS', false);
         let response = await axios.get(queryURL);
-        return GSheetsAPI.parseResponse(response.data.values);
+        return GSheetsAPI.parseResponse<SportEvent>(response.data.values);
     }
 
     /**
@@ -117,7 +108,7 @@ class GSheetsAPI {
     async getFormsList() {
         const queryURL = this.buildQuery('summary!A3:B37', 'ROWS', false);
         let response = await axios.get(queryURL);
-        return GSheetsAPI.parseResponse(response.data.values);
+        return GSheetsAPI.parseResponse<Form>(response.data.values);
     }
 
     /**
@@ -134,9 +125,7 @@ class GSheetsAPI {
      *    beat: 2
      * }
      */
-    async getBonusPointsAllocations(): Promise<{
-        noRecord: CellType, equal: CellType, beat: CellType,
-    }> {
+    async getBonusPointsAllocations(): Promise<BonusPointAllocations> {
         const queryURL = this.buildQuery('point_allocations_record!B3:B5', 'ROWS', false);
         const response = await axios.get(queryURL);
         return {
@@ -159,7 +148,7 @@ class GSheetsAPI {
     async getSummaryStandings() {
         const queryURL = this.buildQuery('summary!A3:E37', 'ROWS', false);
         let response = await axios.get(queryURL);
-        return GSheetsAPI.parseResponse(response.data.values);
+        return GSheetsAPI.parseResponse<SummaryResults>(response.data.values);
     }
 
     /**
@@ -193,7 +182,7 @@ class GSheetsAPI {
           ]
         }
      */
-    async getEventResults(eventDbName: SportEvent, yearGroup: YearGroup) {
+    async getEventResults(eventDbName: SportEventName, yearGroup: YearGroup): Promise<EventResults> {
         const eventsList = await this.getEventsList();
         const formsList = await this.getFormsList();
 
@@ -258,11 +247,11 @@ class GSheetsAPI {
         }
 
         return {
-            a: GSheetsAPI.parseResponse(tabA),
-            b: GSheetsAPI.parseResponse(tabB),
-            c: GSheetsAPI.parseResponse(tabC),
-            rb: GSheetsAPI.parseResponse(tabRB),
-            total: GSheetsAPI.parseResponse(tabTotal),
+            a: GSheetsAPI.parseResponse<SubeventFormResult>(tabA),
+            b: GSheetsAPI.parseResponse<SubeventFormResult>(tabB),
+            c: GSheetsAPI.parseResponse<SubeventFormResult>(tabC),
+            rb: GSheetsAPI.parseResponse<SubeventFormResult>(tabRB),
+            total: GSheetsAPI.parseResponse<SubeventFormResult>(tabTotal),
         };
     }
 
@@ -292,7 +281,7 @@ class GSheetsAPI {
     async getYearGroupRecords(yearGroup: YearGroup) {
         const queryURL = this.buildQuery('y' + yearGroup + '_records!A4:J15', 'ROWS', false);
         let response = await axios.get(queryURL);
-        return GSheetsAPI.parseResponse(response.data.values);
+        return GSheetsAPI.parseResponse<EventRecordStanding>(response.data.values);
     }
 
     /**
@@ -312,7 +301,7 @@ class GSheetsAPI {
     async getRecordsSummaryStats() {
         const queryURL = this.buildQuery('records_summary!A3:C8', 'ROWS', false);
         let response = await axios.get(queryURL);
-        return GSheetsAPI.parseResponse(response.data.values);
+        return GSheetsAPI.parseResponse<YearGroupRecordSummary>(response.data.values);
     }
 
     /**
@@ -383,7 +372,7 @@ class GSheetsAPI {
             // remove the first 5 arrays from the stack ready for the next i
             dataset.values = dataset.values.slice(5);
         }
-        return GSheetsAPI.parseResponse(results);
+        return GSheetsAPI.parseResponse<FormResults>(results);
     }
 }
 

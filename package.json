@@ -5,8 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "run": "yarn run build && node test.js",
-    "postinstall": "../.bin/tsc"
+    "run": "yarn run build && node test.js"
   },
   "repository": {
     "type": "git",

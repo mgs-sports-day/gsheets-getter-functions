@@ -1,4 +1,5 @@
-import GSheetsAPI, { SportEvent } from './index';
+import GSheetsAPI  from './index';
+import { SportEventName } from './types';
 
 (async () => {
     const instance = new GSheetsAPI('AIzaSyCFfbIjKZGPkuXnYUFD4E14flZNKMC9rQE', '1l5ZpGQ6ElmXMdLbr801MFv8cOBf9QVfAHJqiCQti1q0')
@@ -15,7 +16,7 @@ import GSheetsAPI, { SportEvent } from './index';
     console.log('=== getSummaryStandings ===');
     console.log(await instance.getSummaryStandings());
     console.log('=== getEventResults ===');
-    console.log(await instance.getEventResults(SportEvent.Run100, 9));
+    console.log(await instance.getEventResults(SportEventName.Run100, 9));
     console.log('=== getYearGroupRecords ===');
     console.log(await instance.getYearGroupRecords(10));
     console.log('=== getRecordsSummaryStats ===');
