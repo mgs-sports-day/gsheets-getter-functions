@@ -14,7 +14,7 @@ Public Google Sheet ID for 2022: `1l5ZpGQ6ElmXMdLbr801MFv8cOBf9QVfAHJqiCQti1q0`
 
 All but the helper functions use async/await, and depend on Underscore.js and Axios (see `package.json`).
 
-All functions are documented with jsDoc in `index.js`, but have not been exported. Simply copy-paste into the new SD app, making modifications (TS, Fetch API, etc.) as you see fit.
+All functions are documented with jsDoc in `index.ts`, but have not been exported. Simply copy-paste into the new SD app, making modifications (TS, Fetch API, etc.) as you see fit.
 
 Returned data is sorted in spreadsheet order.
 
