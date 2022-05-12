@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "run": "yarn run build && node test.js",
-    "postinstall": "tsc"
+    "postinstall": "../.bin/tsc"
   },
   "repository": {
     "type": "git",
