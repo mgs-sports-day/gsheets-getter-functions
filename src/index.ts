@@ -1,8 +1,8 @@
 // gsheets-getter-functions
 // Functions to load data from the MGS Sports Day spreadsheet
 //
-// (c) 2017-22 PPK, TGT; MIT License
-// This repository is not intended for public distribution.
+// (c) 2017-22 PPK, TGT, GDK; MIT License
+// This repository is not intended for public use. It is a set of internal bindings used by MGS Sports Day v1.5.
 
 import axios from 'axios';
 import { indexOf, pluck, where } from 'underscore';

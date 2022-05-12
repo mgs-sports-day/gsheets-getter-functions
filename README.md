@@ -2,13 +2,7 @@
 
 Functions to load data from the MGS Sports Day spreadsheet
 
-*NOT FOR PUBLIC RELEASE*
-
-## API Keys
-
-Public Google Sheets API key (read-only): `AIzaSyCFfbIjKZGPkuXnYUFD4E14flZNKMC9rQE`
-
-Public Google Sheet ID for 2022: `1l5ZpGQ6ElmXMdLbr801MFv8cOBf9QVfAHJqiCQti1q0`
+**This repository is not intended for public use. It is a set of internal bindings used by MGS Sports Day v1.5.**
 
 ## List of functions
 
@@ -46,6 +40,4 @@ Please do not hesitate to ask if anything needs clarifying.
 
 ## Licensing
 
-These functions are Copyright (c) 2017-22 Pal Kerecsenyi and Theodore Tucker, and are licensed under the MIT License (see `LICENSE`).
-
-This repository is not intended for public distribution.
+These functions are Copyright (c) 2017-22 Pal Kerecsenyi, Theodore Tucker and Geza Kerecsenyi, and are licensed under the MIT License (see `LICENSE`).
