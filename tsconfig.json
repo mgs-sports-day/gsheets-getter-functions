@@ -1,11 +1,11 @@
 {
   "extends": "@tsconfig/node16/tsconfig.json",
   "compilerOptions": {
-    "lib": ["es2021", "dom"]
+    "lib": ["es2021", "dom"],
+    "outDir": "dist",
+    "sourceMap": true,
+    "declaration": true
   },
-  "include": [
-    "index.ts",
-    "test.ts"
-  ],
+  "include": ["src/**/*.ts"],
   "exclude": ["node_modules"]
 }

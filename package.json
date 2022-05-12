@@ -2,10 +2,11 @@
   "name": "gsheets-getter-functions",
   "version": "1.0.0",
   "description": "Functions to load data from the MGS Sports Day spreadsheet",
-  "main": "index.ts",
+  "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "run": "yarn run build && node test.js"
+    "run": "yarn run build && node test.js",
+    "postinstall": "tsc"
   },
   "repository": {
     "type": "git",
