@@ -8,15 +8,11 @@ Functions to load data from the MGS Sports Day spreadsheet
 
 All but the helper functions use async/await, and depend on Underscore.js and Axios (see `package.json`).
 
-All functions are documented with jsDoc in `index.ts`, but have not been exported. Simply copy-paste into the new SD app, making modifications (TS, Fetch API, etc.) as you see fit.
+All functions are documented with jsDoc in `src/index.ts`, and are implemented as methods of the `GSheetsAPI` class.
 
 Returned data is sorted in spreadsheet order.
 
 These functions need updating year-on-year, as the spreadsheet cell references are likely to change.
-
-Please do not hesitate to ask if anything needs clarifying.
-
-*Struck-through functions have not been implemented yet.*
 
 ### Helper functions needed by others
 
@@ -40,4 +36,4 @@ Please do not hesitate to ask if anything needs clarifying.
 
 ## Licensing
 
-These functions are Copyright (c) 2017-22 Pal Kerecsenyi, Theodore Tucker and Geza Kerecsenyi, and are licensed under the MIT License (see `LICENSE`).
+These functions are Copyright (c) 2017-22 Pal Kerecsenyi, Theodore Tucker and Geza Kerecsenyi, and are licensed under the MIT License (see `LICENSE.md`).

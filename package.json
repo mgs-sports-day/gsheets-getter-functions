@@ -5,13 +5,13 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "run": "yarn run build && node test.js"
+    "run": "yarn run build && node dist/test.js"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mgs-sports-day/gsheets-getter-functions.git"
   },
-  "author": "tti0",
+  "contributors": ["tti0", "palkerecsenyi", "gezakerecsenyi"],
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/mgs-sports-day/gsheets-getter-functions/issues"
