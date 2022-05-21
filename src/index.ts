@@ -4,7 +4,6 @@
 // (c) 2017-22 PPK, TGT, GDK; MIT License
 // This repository is not intended for public use. It is a set of internal bindings used by MGS Sports Day v1.5.
 
-import axios from 'axios';
 import { indexOf, pluck, where } from 'underscore';
 import type {
     BonusPointAllocations,
@@ -15,6 +14,7 @@ import type {
     SummaryResults,
     YearGroup, YearGroupRecordSummary,
 } from './types';
+import { ParserFunction, RequestBuilder, RequestCache } from './cache';
 
 class GSheetsAPI {
     private readonly apiKey: string;
@@ -23,23 +23,6 @@ class GSheetsAPI {
     constructor(apiKey: string, sheetId: string) {
         this.apiKey = apiKey;
         this.sheetId = sheetId;
-    }
-
-    /**
-     * Convert the 2D array from the API into a JSON object, using array[0] as the headers
-     * @param {Object} response - The array
-     * @returns {Object} - The JSON object
-     */
-    private static parseResponse<T extends object>(response: any[][]): T[] {
-        const headers = response[0];
-        const dataset = response.slice(1);
-        return dataset.map(a => {
-            const object = {} as any;
-            headers.forEach((k, i) => {
-                object[k] = a[i];
-            });
-            return object;
-        });
     }
 
     /**
@@ -59,23 +42,29 @@ class GSheetsAPI {
     }
 
     /**
-     * Generate the URL for a GET request to the API
+     * Create a RequestBuilder for a request to the Google Sheets API.
      * @param {String} range - The A1 notation of the values to retrieve
      * @param {String} dimension - The major dimension that results should use ("ROWS" or "COLUMNS")
      * @param {Boolean} isFormatted - Should the retrieved data be string formatted as in GDocs?
-     * @returns {String} - The encoded URL
+     * @param {Function} parser - Generate a final object from the server's response. Use RequestCache.twoDimensionParser in most cases.
+     * @returns {RequestBuilder}
      */
-    private buildQuery(range: string, dimension: Dimension, isFormatted: boolean) {
-        range = encodeURIComponent(range);
-        let formatText = isFormatted ? 'FORMATTED_VALUE' : 'UNFORMATTED_VALUE';
-        return `https://sheets.googleapis.com/v4/spreadsheets/${this.sheetId}/values/${range}?majorDimension=${dimension}&valueRenderOption=${formatText}&key=${this.apiKey}`;
+    private newRequest<T>(range: string, dimension: Dimension, isFormatted: boolean, parser: ParserFunction<T>) {
+        const builder = this.newRequestBuilder<T>()
+        return builder.add(() => {
+            return new RequestCache<T>(this.apiKey, this.sheetId, range, dimension, isFormatted).setParser(parser);
+        })
+    }
+
+    private newRequestBuilder<T>() {
+        return new RequestBuilder<T>(this.apiKey, this.sheetId)
     }
 
     /**
      * Get the list of all events from the spreadsheet
      * Useful to run this function once on app load, as this array is needed by other functions later
      * @async
-     * @returns {Promise<Array>} - See example below
+     * @returns {RequestBuilder<Array>} - See example below
      * @example
      * [ {
      *   db: 'longJump',
@@ -87,17 +76,17 @@ class GSheetsAPI {
      *   }, ...
      * ]
      */
-    async getEventsList() {
-        const queryURL = this.buildQuery('event_list!A2:F13', 'ROWS', false);
-        let response = await axios.get(queryURL);
-        return GSheetsAPI.parseResponse<SportEvent>(response.data.values);
+    getEventsList() {
+        const request = this.newRequest<SportEvent[]>('event_list!A2:F13', 'ROWS', false, RequestCache.twoDimensionParser);
+        request.alwaysCache = true;
+        return request;
     }
 
     /**
      * Get the list of all forms from the spreadsheet
      * Useful to run this function once on app load, as this array is needed by other functions later
      * @async
-     * @returns {Promise<Array>} - See example below
+     * @returns {RequestBuilder<Array>} - See example below
      * @example
      * [
      *   { year: 7, form: 'B' },
@@ -105,10 +94,8 @@ class GSheetsAPI {
      *   { year: 7, form: 'E' }, ...
      * ]
      */
-    async getFormsList() {
-        const queryURL = this.buildQuery('summary!A3:B37', 'ROWS', false);
-        let response = await axios.get(queryURL);
-        return GSheetsAPI.parseResponse<Form>(response.data.values);
+    getFormsList() {
+        return this.newRequest<Form[]>('summary!A3:B37', 'ROWS', false, RequestCache.twoDimensionParser);
     }
 
     /**
@@ -117,7 +104,7 @@ class GSheetsAPI {
      *  as only bonus point values (not their meanings) are retrieved for each event.
      *  Otherwise, there is no way to verbally indicate to the user if a record has been broken.
      * @async
-     * @returns {Promise<Object>} - See example below
+     * @returns {RequestBuilder<Object>} - See example below
      * @example
      * {
      *    noRecord: 0,
@@ -125,18 +112,22 @@ class GSheetsAPI {
      *    beat: 2
      * }
      */
-    async getBonusPointsAllocations(): Promise<BonusPointAllocations> {
-        const queryURL = this.buildQuery('point_allocations_record!B3:B5', 'ROWS', false);
-        const response = await axios.get(queryURL);
-        return {
-            noRecord: response.data.values[0][0], equal: response.data.values[1][0], beat: response.data.values[2][0],
-        };
+    getBonusPointsAllocations() {
+        return this.newRequest<BonusPointAllocations>(
+            'point_allocations_record!B3:B5',
+            'ROWS',
+            false,
+            response => {
+                return {
+                    noRecord: response[0][0], equal: response[1][0], beat: response[2][0],
+                };
+            });
     }
 
     /**
      * Get a list of all forms, their total points, and year group and whole school position standings
      * @async
-     * @returns {Promise<Array>} - See example below
+     * @returns {RequestBuilder<Array>} - See example below
      * @example
      * [
      { year: 7, form: 'B', points: 480, yearPos: 2, schoolPos: 9 },
@@ -145,10 +136,8 @@ class GSheetsAPI {
      { year: 7, form: 'H', points: 449, yearPos: 6, schoolPos: 20 }, ...
      * ]
      */
-    async getSummaryStandings() {
-        const queryURL = this.buildQuery('summary!A3:E37', 'ROWS', false);
-        let response = await axios.get(queryURL);
-        return GSheetsAPI.parseResponse<SummaryResults>(response.data.values);
+    getSummaryStandings() {
+        return this.newRequest<SummaryResults[]>('summary!A3:E37', 'ROWS', false, RequestCache.twoDimensionParser);
     }
 
     /**
@@ -157,7 +146,7 @@ class GSheetsAPI {
      * @async
      * @param {String} eventDbName - The database name (the "db" field in eventsList) of the event for which results are to be retrieved
      * @param {Number} yearGroup - The year group for which results are to be retrieved (one of [7, 8, 9, 10])
-     * @returns {Promise<Object>} - See example below
+     * @returns {RequestBuilder<Object>} - See example below
      * @example
      * {
           A: [
@@ -182,77 +171,94 @@ class GSheetsAPI {
           ]
         }
      */
-    async getEventResults(eventDbName: SportEventName, yearGroup: YearGroup): Promise<EventResults> {
-        const eventsList = await this.getEventsList();
-        const formsList = await this.getFormsList();
-
-        const matchingEvents = where(eventsList, { db: eventDbName });
-        if (matchingEvents.length === 0) {
-            throw new Error('invalid eventDbName');
-        }
-        const matchingEvent = matchingEvents[0];
-        const matchingYearLetters = where(formsList, { year: yearGroup });
-        if (![7, 8, 9, 10].includes(yearGroup)) {
-            throw new Error('invalid yearGroup');
-        }
-
-        const spreadsheetRange = `y${yearGroup}_results!${
-            GSheetsAPI.intToSpreadsheetColLetter(matchingEvent.startingCol as number)
-        }9:${
-            GSheetsAPI.intToSpreadsheetColLetter((matchingEvent.startingCol as number) + 4)
-        }${
-            yearGroup === 9 ? '28' : '24' // year 9 has 10 forms this year; all others have 8 forms
-        }`;
-
-        const queryURL = this.buildQuery(spreadsheetRange, 'COLUMNS', false);
-        const response = await axios.get(queryURL);
-        const dataset = response.data;
-
-        // add headers as first row of all arrays, ready for JSON parsing
-        const resultsTabHeaders = ['letter', 'pos', 'pts'];
-        const tabA = [resultsTabHeaders];
-        const tabB = [resultsTabHeaders];
-        const tabC = [resultsTabHeaders];
-        const tabRB = [resultsTabHeaders];
-        const tabTotal = [resultsTabHeaders];
-
-        // for each column (i.e. sub-event) we get back from the API
-        for (let i = 0; i < dataset.values.length; i++) {
-            let currentColData = dataset.values[i];
-            // for every form in this year group
-            for (let j = 0; j < matchingYearLetters.length; j++) {
-                // get the first 2 numbers from the stack (our relevant pos and pts)
-                const newRecord = [matchingYearLetters[j].form, currentColData[0], currentColData[1]];
-                // and add them as a new sub-array in the relevant array
-                switch (i) {
-                    case 0:
-                        tabA.push(newRecord);
-                        break;
-                    case 1:
-                        tabB.push(newRecord);
-                        break;
-                    case 2:
-                        tabC.push(newRecord);
-                        break;
-                    case 3:
-                        tabRB.push(newRecord);
-                        break;
-                    case 4:
-                        tabTotal.push(newRecord);
-                        break;
+    getEventResults(eventDbName: SportEventName, yearGroup: YearGroup) {
+        return this.newRequestBuilder<EventResults[]>()
+            .add(() => this.getEventsList())
+            .add(() => this.getFormsList())
+            .add(([eventsList, formsList]) => {
+                const matchingEvents = where(eventsList, { db: eventDbName });
+                if (matchingEvents.length === 0) {
+                    throw new Error('invalid eventDbName');
                 }
-                // remove the first two elements of the array for the next j
-                currentColData = currentColData.slice(2);
-            }
-        }
+                const matchingEvent = matchingEvents[0];
+                const matchingYearLetters = where(formsList, { year: yearGroup });
+                if (![7, 8, 9, 10].includes(yearGroup)) {
+                    throw new Error('invalid yearGroup');
+                }
 
-        return {
-            a: GSheetsAPI.parseResponse<SubeventFormResult>(tabA),
-            b: GSheetsAPI.parseResponse<SubeventFormResult>(tabB),
-            c: GSheetsAPI.parseResponse<SubeventFormResult>(tabC),
-            rb: GSheetsAPI.parseResponse<SubeventFormResult>(tabRB),
-            total: GSheetsAPI.parseResponse<SubeventFormResult>(tabTotal),
-        };
+                const spreadsheetRange = `y${yearGroup}_results!${
+                    GSheetsAPI.intToSpreadsheetColLetter(matchingEvent.startingCol as number)
+                }9:${
+                    GSheetsAPI.intToSpreadsheetColLetter((matchingEvent.startingCol as number) + 4)
+                }${
+                    yearGroup === 9 ? '28' : '24' // year 9 has 10 forms this year; all others have 8 forms
+                }`;
+
+                return {
+                    matchingEvent, matchingYearLetters,
+                    spreadsheetRange,
+                }
+            })
+            .add(([,,{matchingEvent, matchingYearLetters, spreadsheetRange}]) => {
+                return this.newRequest(
+                    spreadsheetRange,
+                    'COLUMNS',
+                    false,
+                    (dataset) => {
+                        // add headers as first row of all arrays, ready for JSON parsing
+                        const resultsTabHeaders = ['letter', 'pos', 'pts'];
+                        const tabA = [resultsTabHeaders];
+                        const tabB = [resultsTabHeaders];
+                        const tabC = [resultsTabHeaders];
+                        const tabRB = [resultsTabHeaders];
+                        const tabTotal = [resultsTabHeaders];
+
+                        // for each column (i.e. sub-event) we get back from the API
+                        for (let i = 0; i < dataset.length; i++) {
+                            let currentColData = dataset[i];
+                            // for every form in this year group
+                            for (let j = 0; j < matchingYearLetters.length; j++) {
+                                // get the first 2 numbers from the stack (our relevant pos and pts)
+                                const newRecord = [matchingYearLetters[j].form, currentColData[0], currentColData[1]];
+                                // and add them as a new sub-array in the relevant array
+                                switch (i) {
+                                    case 0:
+                                        tabA.push(newRecord);
+                                        break;
+                                    case 1:
+                                        tabB.push(newRecord);
+                                        break;
+                                    case 2:
+                                        tabC.push(newRecord);
+                                        break;
+                                    case 3:
+                                        tabRB.push(newRecord);
+                                        break;
+                                    case 4:
+                                        tabTotal.push(newRecord);
+                                        break;
+                                }
+                                // remove the first two elements of the array for the next j
+                                currentColData = currentColData.slice(2);
+                            }
+                        }
+
+                        return {
+                            a: RequestCache.twoDimensionParser(tabA),
+                            b: RequestCache.twoDimensionParser(tabB),
+                            c: RequestCache.twoDimensionParser(tabC),
+                            rb: RequestCache.twoDimensionParser(tabRB),
+                            total: RequestCache.twoDimensionParser(tabTotal),
+                        } as {
+                            a: SubeventFormResult[],
+                            b: SubeventFormResult[],
+                            c: SubeventFormResult[],
+                            rb: SubeventFormResult[],
+                            total: SubeventFormResult[],
+                        };
+                    }
+                )
+            })
     }
 
     /**
@@ -260,7 +266,7 @@ class GSheetsAPI {
      * Once retrieved, these data can be shown (as a summary) or can be queried (e.g. with _) to include data for a single event on its page
      * @async
      * @param {Number} yearGroup - The year group for which results are to be retrieved (one of [7, 8, 9, 10])
-     * @returns {Promise<Array>} - See example below
+     * @returns {RequestBuilder<Array>} - See example below
      * @example
      * [
          {
@@ -279,15 +285,13 @@ class GSheetsAPI {
      }
      */
     async getYearGroupRecords(yearGroup: YearGroup) {
-        const queryURL = this.buildQuery('y' + yearGroup + '_records!A4:J15', 'ROWS', false);
-        let response = await axios.get(queryURL);
-        return GSheetsAPI.parseResponse<EventRecordStanding>(response.data.values);
+        return this.newRequest<EventRecordStanding[]>('y' + yearGroup + '_records!A4:J15', 'ROWS', false, RequestCache.twoDimensionParser);
     }
 
     /**
      * For the whole school, get the number of records broken and equalled this year by each year group's competitors
      * @async
-     * @returns {Promise<Array>} - See example below
+     * @returns {RequestBuilder<Array>} - See example below
      * @example
      * [
          { year: 'Year 7', recordsEqualled: 0, recordsBroken: 0 },
@@ -299,9 +303,7 @@ class GSheetsAPI {
      }
      */
     async getRecordsSummaryStats() {
-        const queryURL = this.buildQuery('records_summary!A3:C8', 'ROWS', false);
-        let response = await axios.get(queryURL);
-        return GSheetsAPI.parseResponse<YearGroupRecordSummary>(response.data.values);
+        return this.newRequest<YearGroupRecordSummary[]>('records_summary!A3:C8', 'ROWS', false, RequestCache.twoDimensionParser);
     }
 
     /**
@@ -310,7 +312,7 @@ class GSheetsAPI {
      * @async
      * @param {Number} yearGroup - The year group for which results are to be retrieved (one of [7, 8, 9, 10])
      * @param {String} formLetters - The letter part only of a form's name (e.g. "W" for 8W, or "PJH/DMT" for 9PJH/DMT)
-     * @returns {Promise<Array>} - See example below
+     * @returns {RequestBuilder<Array>} - See example below
      * @example
          [
              {
@@ -327,52 +329,59 @@ class GSheetsAPI {
             }, ...
         ]
      */
-    async getFormResults(yearGroup: YearGroup, formLetters: string) {
-        const eventsList = await this.getEventsList()
-        const formsList = await this.getFormsList()
+    getFormResults(yearGroup: YearGroup, formLetters: string) {
+        return this.newRequestBuilder<FormResults[]>()
+            .add(() => this.getEventsList())
+            .add(() => this.getFormsList())
+            .add(([,formsList]) => {
+                const possibleForms = pluck(where(formsList, { year: yearGroup }), 'form');
+                if (possibleForms.length === 0) {
+                    throw new Error('invalid yearGroup');
+                }
+                // find n; where our form is the nth row in the SS
+                let position = indexOf(possibleForms, formLetters);
+                if (position === -1) {
+                    throw new Error('invalid formLetters');
+                }
+                // convert to a row number: *2 because each form takes two rows; +8 initial offset from top of sheet; +1 off-by-one correction (JS counts from 0)
+                position = (2 * position) + 8 + 1;
 
-        const possibleForms = pluck(where(formsList, { year: yearGroup }), 'form');
-        if (possibleForms.length === 0) {
-            throw new Error('invalid yearGroup');
-        }
-        // find n; where our form is the nth row in the SS
-        let position = indexOf(possibleForms, formLetters);
-        if (position === -1) {
-            throw new Error('invalid formLetters');
-        }
-        // convert to a row number: *2 because each form takes two rows; +8 initial offset from top of sheet; +1 off-by-one correction (JS counts from 0)
-        position = (2 * position) + 8 + 1;
-
-        // API request
-        const ssRange = `y${yearGroup}_results!D${position}:BF${position + 1}`;
-        const queryURL = this.buildQuery(ssRange, 'COLUMNS', false);
-        const response = await axios.get(queryURL);
-        const dataset = response.data;
-
-        // add headers as first row of all arrays, ready for JSON parsing
-        let results = [['eventDb', 'eventPretty', 'posA', 'ptsA', 'posB', 'ptsB', 'posC', 'ptsC', 'ptsRB', 'ptsTOTAL']];
-        // for every event
-        for (let i = 0; i < eventsList.length; i++) {
-            // make up the new line from the SS
-            // the first 5 arrays are the columns for this event (A, B, C, RB, TOTAL)
-            // consider the [0][1], etc. as relative Y, X co-ords within an SS form event 'block'
-            const newLine = [
-                eventsList[i].db,
-                eventsList[i].pretty,
-                dataset.values[0][0], // posA
-                dataset.values[0][1], // ptsA
-                dataset.values[1][0], // posB
-                dataset.values[1][1], // ptsB
-                dataset.values[2][0], // posC
-                dataset.values[2][1], // ptsC
-                dataset.values[3][1], // ptsRB
-                dataset.values[4][1], // ptsTOTAL
-            ];
-            results.push(newLine);
-            // remove the first 5 arrays from the stack ready for the next i
-            dataset.values = dataset.values.slice(5);
-        }
-        return GSheetsAPI.parseResponse<FormResults>(results);
+                // API request
+                return `y${yearGroup}_results!D${position}:BF${position + 1}`;
+            })
+            .add(([eventsList,,ssRange]) => {
+                return this.newRequest(
+                    ssRange,
+                    'COLUMNS',
+                    false,
+                    (dataset) => {
+                        // add headers as first row of all arrays, ready for JSON parsing
+                        let results = [['eventDb', 'eventPretty', 'posA', 'ptsA', 'posB', 'ptsB', 'posC', 'ptsC', 'ptsRB', 'ptsTOTAL']];
+                        // for every event
+                        for (let i = 0; i < eventsList.length; i++) {
+                            // make up the new line from the SS
+                            // the first 5 arrays are the columns for this event (A, B, C, RB, TOTAL)
+                            // consider the [0][1], etc. as relative Y, X co-ords within an SS form event 'block'
+                            const newLine = [
+                                eventsList[i].db,
+                                eventsList[i].pretty,
+                                dataset[0][0], // posA
+                                dataset[0][1], // ptsA
+                                dataset[1][0], // posB
+                                dataset[1][1], // ptsB
+                                dataset[2][0], // posC
+                                dataset[2][1], // ptsC
+                                dataset[3][1], // ptsRB
+                                dataset[4][1], // ptsTOTAL
+                            ];
+                            results.push(newLine);
+                            // remove the first 5 arrays from the stack ready for the next i
+                            dataset = dataset.slice(5);
+                        }
+                        return RequestCache.twoDimensionParser(results);
+                    }
+                )
+            })
     }
 }
 
