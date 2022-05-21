@@ -14,6 +14,8 @@ Returned data is sorted in spreadsheet order.
 
 These functions need updating year-on-year, as the spreadsheet cell references are likely to change.
 
+This library is managed with **yarn**, not npm.
+
 ### Helper functions needed by others
 
 + sdBuildQuery
