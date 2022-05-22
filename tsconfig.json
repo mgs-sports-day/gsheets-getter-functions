@@ -3,7 +3,7 @@
   "compilerOptions": {
     "lib": ["es2021", "dom"],
     "outDir": "dist",
-    "sourceMap": true,
+    "sourceMap": false,
     "declaration": true
   },
   "include": ["src/**/*.ts"],

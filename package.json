@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "run": "yarn run build && node dist/test.js",
-    "prepublish": "tsc"
+    "prepublishOnly": "tsc"
   },
   "repository": {
     "type": "git",
