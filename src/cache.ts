@@ -5,12 +5,21 @@ import axios from 'axios';
 export type ParserFunction<T> = (response: any[][]) => T
 
 type RequestBuilderItem<PreviousValues extends any[], Out> = (values: PreviousValues) => RequestCache<Out> | RequestBuilder<Out> | Out
+
+/**
+ * A class to make sure only the necessary requests are reloaded, and everything else is cached.
+ *
+ * Create an instance of the class, and then use `.add()` to chain new 'steps' to the request. **Each instance of
+ * RequestCache needs to have its own step**.
+ *
+ * Once all steps have been defined, you can call `.run()` to asynchronously execute all steps in order.
+ */
 export class RequestBuilder<T, NextIn extends any[] = [], NextOut = T> {
     private readonly apiKey: string
     private readonly sheetId: string
     private items: RequestBuilderItem<any, any>[]
     /**
-     * Whether to ignore allowCache = false and use a cached value regardless.
+     * Whether to ignore `allowCache = false` and use a cached value regardless.
      * Useful for data that we know will never change (e.g. events list).
      */
     alwaysCache = false
@@ -20,6 +29,29 @@ export class RequestBuilder<T, NextIn extends any[] = [], NextOut = T> {
         this.items = []
     }
 
+    /**
+     * Add a new step to the request. This can either be another `RequestBuilder`, a single request (instance of `RequestCache`)
+     * or just a simple synchronous function that returns a value.
+     *
+     * If using a simple function as the parameter, it gets passed `values` — this is an array containing the results of
+     * all previous steps. If a previous step with a `RequestBuilder`/`RequestCache`, it will be the result of the request
+     * (after being put through any applicable parser specified in `RequestCache`). If a previous step was a simple function,
+     * it will be the value returned by the function.
+     *
+     * You can use array destructuring to make this easier and more logical. See the example below.
+     *
+     * @example
+     * request.add(([result1, result2]) => {
+     *     // do some calculations here
+     *     const result3 = result1 + result2
+     *     return result3
+     * })
+     *
+     * @param request - The step to add to the `RequestBuilder`
+     * @returns The modified `RequestBuilder` instance with the new step added. Calling `.add()` on the returned `RequestBuilder`
+     * will allow you to use the output value of the previous step. Note that `.add()` doesn't add to the existing class,
+     * but instead returns a new one.
+     */
     add<In extends any[] = NextIn, Out = NextOut>(request: RequestBuilderItem<In, Out>) {
         const newRequestBuilder = new RequestBuilder<T, [...In, Out]>(this.apiKey, this.sheetId)
         newRequestBuilder.items = [
@@ -29,6 +61,21 @@ export class RequestBuilder<T, NextIn extends any[] = [], NextOut = T> {
         return newRequestBuilder
     }
 
+    /**
+     * Asynchronously execute all steps defined by calls to `.add()`.
+     *
+     * If any of the steps are `RequestBuilder`s or `RequestCache`s, it will use the cached values where available.
+     *
+     * If no cached value is available, or `allowCache` is set to false, it will use always use a live value by making a
+     * request to the Google Sheets API.
+     *
+     * If `allowCache` is set to false but one of the steps is a `RequestBuilder` with `alwaysCache = true`, it will
+     * attempt to use a cached value anyway.
+     *
+     * @param allowCache - Whether to allow cached values. If `false`, will ignore cached values and always make requests,
+     * except for steps which are a `RequestBuilder` with `alwaysCache = true`.
+     * @returns {Promise<T>} - Promise resolving to the specified type `T`
+     */
     async run(allowCache = true): Promise<T> {
         const values = []
         for (const item of this.items) {

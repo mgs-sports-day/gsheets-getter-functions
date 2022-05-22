@@ -95,7 +95,9 @@ class GSheetsAPI {
      * ]
      */
     getFormsList() {
-        return this.newRequest<Form[]>('summary!A3:B37', 'ROWS', false, RequestCache.twoDimensionParser);
+        const request = this.newRequest<Form[]>('summary!A3:B37', 'ROWS', false, RequestCache.twoDimensionParser);
+        request.alwaysCache = true;
+        return request;
     }
 
     /**
