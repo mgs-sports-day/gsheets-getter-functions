@@ -145,6 +145,10 @@ class GSheetsAPI {
     /**
      * For a single event and year group, get the positions and points scored by competitors from each form, in each of the sub-events A, B, C
      *  Also returns total points per form in that event, and number of Record Bonus points
+     *
+     *  Note: `total` array items don't include the position as this isn't calculated and isn't relevant at the level of individual events.
+     *  The `pos` value inside `total` may be either an empty string or undefined.
+     *
      * @async
      * @param {String} eventDbName - The database name (the "db" field in eventsList) of the event for which results are to be retrieved
      * @param {Number} yearGroup - The year group for which results are to be retrieved (one of [7, 8, 9, 10])
@@ -174,7 +178,7 @@ class GSheetsAPI {
         }
      */
     getEventResults(eventDbName: SportEventName, yearGroup: YearGroup) {
-        return this.newRequestBuilder<EventResults[]>()
+        return this.newRequestBuilder<EventResults>()
             .add(() => this.getEventsList())
             .add(() => this.getFormsList())
             .add(([eventsList, formsList]) => {

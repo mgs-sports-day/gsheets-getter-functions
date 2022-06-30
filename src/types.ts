@@ -59,8 +59,8 @@ export interface EventResults {
     a: SubeventFormResult[]
     b: SubeventFormResult[]
     c: SubeventFormResult[]
-    rb: SubeventFormResult[]
-    total: SubeventFormResult[]
+    rb: Omit<SubeventFormResult, "pos">[]
+    total: Omit<SubeventFormResult, "pos">[]
 }
 
 export interface SummaryResults extends Form {
