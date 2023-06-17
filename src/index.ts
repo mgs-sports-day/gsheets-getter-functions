@@ -5,6 +5,7 @@
 // This repository is not intended for public use. It is a set of internal bindings used by MGS Sports Day v1.5.
 
 import { indexOf, pluck, where } from 'underscore';
+import { SpreadsheetConstants } from './SpreadsheetConstants';
 import type {
     BonusPointAllocations,
     Dimension, EventRecordStanding, EventResults,
@@ -48,7 +49,8 @@ class GSheetsAPI {
      * @param {String} range - The A1 notation of the values to retrieve
      * @param {String} dimension - The major dimension that results should use ("ROWS" or "COLUMNS")
      * @param {Boolean} isFormatted - Should the retrieved data be string formatted as in GDocs?
-     * @param {Function} parser - Generate a final object from the server's response. Use RequestCache.twoDimensionParser in most cases.
+     * @param {Function} parser - Generate a final object from the server's response. Use
+     *     RequestCache.twoDimensionParser in most cases.
      * @returns {RequestBuilder}
      */
     private newRequest<T>(range: string, dimension: Dimension, isFormatted: boolean, parser: ParserFunction<T>) {
@@ -79,7 +81,7 @@ class GSheetsAPI {
      * ]
      */
     getEventsList() {
-        const request = this.newRequest<SportEvent[]>('event_list!A2:F13', 'ROWS', false, RequestCache.twoDimensionParser);
+        const request = this.newRequest<SportEvent[]>(`event_list!A2:F${SpreadsheetConstants.EventListRowCount}`, 'ROWS', false, RequestCache.twoDimensionParser);
         request.alwaysCache = true;
         return request;
     }
@@ -97,7 +99,7 @@ class GSheetsAPI {
      * ]
      */
     getFormsList() {
-        const request = this.newRequest<Form[]>('summary!A3:B37', 'ROWS', false, RequestCache.twoDimensionParser);
+        const request = this.newRequest<Form[]>(`summary!A3:B${SpreadsheetConstants.EventSummaryRowCount}`, 'ROWS', false, RequestCache.twoDimensionParser);
         request.alwaysCache = true;
         return request;
     }
@@ -141,7 +143,7 @@ class GSheetsAPI {
      * ]
      */
     getSummaryStandings() {
-        return this.newRequest<SummaryResults[]>('summary!A3:E37', 'ROWS', false, RequestCache.twoDimensionParser);
+        return this.newRequest<SummaryResults[]>(`summary!A3:E${SpreadsheetConstants.EventSummaryRowCount}`, 'ROWS', false, RequestCache.twoDimensionParser);
     }
 
     static getYearGroupResultsTableLength(yearGroup: YearGroup) {
@@ -157,14 +159,15 @@ class GSheetsAPI {
     }
 
     /**
-     * For a single event and year group, get the positions and points scored by competitors from each form, in each of the sub-events A, B, C
-     *  Also returns total points per form in that event, and number of Record Bonus points
+     * For a single event and year group, get the positions and points scored by competitors from each form, in each of
+     * the sub-events A, B, C Also returns total points per form in that event, and number of Record Bonus points
      *
-     *  Note: `total` array items don't include the position as this isn't calculated and isn't relevant at the level of individual events.
-     *  The `pos` value inside `total` may be either an empty string or undefined.
+     *  Note: `total` array items don't include the position as this isn't calculated and isn't relevant at the level
+     * of individual events. The `pos` value inside `total` may be either an empty string or undefined.
      *
      * @async
-     * @param {String} eventDbName - The database name (the "db" field in eventsList) of the event for which results are to be retrieved
+     * @param {String} eventDbName - The database name (the "db" field in eventsList) of the event for which results
+     *     are to be retrieved
      * @param {Number} yearGroup - The year group for which results are to be retrieved (one of [7, 8, 9, 10])
      * @returns {RequestBuilder<Object>} - See example below
      * @example
@@ -215,7 +218,8 @@ class GSheetsAPI {
                 }`;
 
                 return {
-                    matchingEvent, matchingYearLetters,
+                    matchingEvent,
+                    matchingYearLetters,
                     spreadsheetRange,
                 }
             })
@@ -283,7 +287,8 @@ class GSheetsAPI {
 
     /**
      * For a given year group, get the table of records
-     * Once retrieved, these data can be shown (as a summary) or can be queried (e.g. with _) to include data for a single event on its page
+     * Once retrieved, these data can be shown (as a summary) or can be queried (e.g. with _) to include data for a
+     * single event on its page
      * @async
      * @param {Number} yearGroup - The year group for which results are to be retrieved (one of [7, 8, 9, 10])
      * @returns {RequestBuilder<Array>} - See example below
@@ -305,7 +310,7 @@ class GSheetsAPI {
      }
      */
     async getYearGroupRecords(yearGroup: YearGroup) {
-        return this.newRequest<EventRecordStanding[]>('y' + yearGroup + '_records!A4:J15', 'ROWS', false, RequestCache.twoDimensionParser);
+        return this.newRequest<EventRecordStanding[]>(`y${yearGroup}_records!A4:J${SpreadsheetConstants.RecordPageRowCount}`, 'ROWS', false, RequestCache.twoDimensionParser);
     }
 
     /**
@@ -328,7 +333,8 @@ class GSheetsAPI {
 
     /**
      * For a single form, get that form's positions and points in all events
-     * Once retrieved, these data can be shown (as a summary on a form's page) or can be queried (e.g. with _) to include data for a single event
+     * Once retrieved, these data can be shown (as a summary on a form's page) or can be queried (e.g. with _) to
+     * include data for a single event
      * @async
      * @param {Number} yearGroup - The year group for which results are to be retrieved (one of [7, 8, 9, 10])
      * @param {String} formLetters - The letter part only of a form's name (e.g. "W" for 8W, or "PJH/DMT" for 9PJH/DMT)
