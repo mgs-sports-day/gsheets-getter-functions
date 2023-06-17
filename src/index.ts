@@ -21,6 +21,8 @@ class GSheetsAPI {
     private readonly sheetId: string;
 
     constructor(apiKey: string, sheetId: string) {
+        console.log('debug');
+
         this.apiKey = apiKey;
         this.sheetId = sheetId;
     }
@@ -142,6 +144,18 @@ class GSheetsAPI {
         return this.newRequest<SummaryResults[]>('summary!A3:E37', 'ROWS', false, RequestCache.twoDimensionParser);
     }
 
+    static getYearGroupResultsTableLength(yearGroup: YearGroup) {
+        switch (yearGroup) {
+            case 7:
+            case 8:
+                return 24;
+            case 9:
+                return 26;
+            case 10:
+                return 28;
+        }
+    }
+
     /**
      * For a single event and year group, get the positions and points scored by competitors from each form, in each of the sub-events A, B, C
      *  Also returns total points per form in that event, and number of Record Bonus points
@@ -193,7 +207,7 @@ class GSheetsAPI {
                 }9:${
                     GSheetsAPI.intToSpreadsheetColLetter((matchingEvent.startingCol as number) + 4)
                 }${
-                    yearGroup === 9 ? '28' : '24' // year 9 has 10 forms this year; all others have 8 forms
+                    GSheetsAPI.getYearGroupResultsTableLength(yearGroup)
                 }`;
 
                 return {
