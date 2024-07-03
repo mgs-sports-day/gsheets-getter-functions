@@ -13,7 +13,7 @@ export enum SportEventName {
     Run800 = '800m',
     Run1500 = '1500m',
     Run4x100 = '4x100m',
-    Run4x300 = '4x300m'
+    Run4x300 = '4x200m'
 }
 
 export interface SportEvent {
